@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-const Settings = () => {
+const Settings = ({ onLogout }: { onLogout?: () => void }) => {
   const { toast } = useToast();
   const [aiConsent, setAiConsent] = useState(true);
   const [dataSharing, setDataSharing] = useState(true);
@@ -22,7 +22,7 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-[#0f061e]">
-      <Navigation />
+      <Navigation onLogout={onLogout} />
       
       <div className="max-w-4xl mx-auto p-6 pt-32 space-y-8">
         {/* Privacy & AI Settings */}

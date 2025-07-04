@@ -67,7 +67,7 @@ export function HomeSparkles() {
   );
 }
 
-const Home = () => {
+const Home = ({ onLogout }: { onLogout?: () => void }) => {
   const navigate = useNavigate();
 
   const features = [
@@ -95,7 +95,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-[#0f061e]">
-      <Navigation />
+      <Navigation onLogout={onLogout} />
       <HomeSparkles />
 
       {/* Hero Section */}
