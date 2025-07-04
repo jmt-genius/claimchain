@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
 from typing import Optional
 from fastapi import UploadFile
@@ -40,7 +40,21 @@ class ClaimResponse(BaseModel):
     reason: str
 
 class CardiacEvent(BaseModel):
-    customer_id: str = Field(..., alias="customerId")
+    user_id: str = Field(..., alias="userId")
     bpm: int
     timestamp: datetime
-    summary: Optional[str] = None 
+    summary: Optional[str] = None
+
+class UserSignup(BaseModel):
+    email: EmailStr
+    password: str
+    name: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserOut(BaseModel):
+    user_id: str
+    email: EmailStr
+    name: Optional[str] = None 
