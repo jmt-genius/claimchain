@@ -1,11 +1,16 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Body
+from fastapi.responses import JSONResponse
 from models.schemas import (
     QuickClaimRequest, 
     QuickClaimResponse, 
     MedicalReportValidationResponse,
-    FullClaimEvaluationResponse
+    FullClaimEvaluationResponse,
+    ClaimResponse,
+    CardiacEvent
 )
 from services.gemini_service import GeminiService
+from utils.mongo import db
+from datetime import datetime
 
 router = APIRouter(prefix="/claims", tags=["claims"])
 gemini_service = GeminiService()
@@ -85,5 +90,45 @@ async def generate_quick_claim(
             hospital_cost=hospital_cost
         )
         return QuickClaimResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/calculate-claim", response_model=ClaimResponse)
+async def calculate_claim(
+    policy_file: UploadFile,
+    sum_insured: float = Form(...),
+    event_start: str = Form(...),
+    event_end: str = Form(...),
+    hospital_cost: float = Form(...)
+):
+    try:
+        # Extract text from PDF
+        policy_text = await gemini_service._extract_pdf_text(policy_file)
+
+        # Prepare claim details
+        claim_details = {
+            "sum_insured": sum_insured,
+            "event_start": event_start,
+            "event_end": event_end,
+            "hospital_cost": hospital_cost
+        }
+
+        # Generate claim analysis
+        result = await gemini_service.generate_quick_claim(policy_file, sum_insured, event_start, event_end, hospital_cost)
+
+        return ClaimResponse(**result)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cardiac-event", status_code=201)
+async def add_cardiac_event(event: CardiacEvent = Body(...)):
+    try:
+        event_dict = event.dict(by_alias=True)
+        # Ensure timestamp is in ISO format for MongoDB
+        if isinstance(event_dict["timestamp"], datetime):
+            event_dict["timestamp"] = event_dict["timestamp"].isoformat()
+        result = await db["cardiac_events"].insert_one(event_dict)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"inserted_id": str(result.inserted_id)})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
