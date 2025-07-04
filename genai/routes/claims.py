@@ -180,7 +180,7 @@ async def calculate_claim(
 async def send_hospital_verification_email(claim_id: str, body: dict = Body(...)):
     email = body.get("email")
     # Verification link
-    link = f"http://localhost:5173/hospital-verify?claim_id={claim_id}"
+    link = f"http://localhost:8080/hospital-verify?claim_id={claim_id}"
     if not email:
         raise HTTPException(status_code=422, detail="'email' is required.")
     try:
