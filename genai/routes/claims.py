@@ -159,7 +159,7 @@ async def calculate_claim(
         hospital_cost = 50000
 
         policy_text = policy_text
-    # Prepare claim details
+        # Prepare claim details
         claim_details = {
             "sum_insured": sum_insured,
             "event_start": event_start,
@@ -179,15 +179,27 @@ async def calculate_claim(
 @router.post("/send-hospital-verification-email/{claim_id}")
 async def send_hospital_verification_email(claim_id: str, body: dict = Body(...)):
     email = body.get("email")
-    # Hardcoded verification link
-    link = f"https://yourdomain.com/hospital-verify?claim_id={claim_id}"
+    # Verification link
+    link = f"http://localhost:5173/hospital-verify?claim_id={claim_id}"
     if not email:
         raise HTTPException(status_code=422, detail="'email' is required.")
     try:
-        await send_verification_link(email, link)
+        # Fetch claim and user for personalization
+        claim = await db["full_claims"].find_one({"_id": ObjectId(claim_id)})
+        if not claim:
+            raise HTTPException(status_code=404, detail="Claim not found.")
+        user = await db["users"].find_one({"_id": ObjectId(claim["user_id"])})
+        patient_name = user.get("name") if user else None
+        # Personalised message
+        if patient_name:
+            message = f"Dear Hospital,\n\nA claim verification is requested for patient: {patient_name}. Please upload the required documents using the following link: {link}\n\nThank you."
+        else:
+            message = f"Dear Hospital,\n\nA claim verification is requested. Please upload the required documents using the following link: {link}\n\nThank you."
+        await send_verification_link(email, link, message=message)
         return {"success": True, "message": f"Verification link sent to {email}", "claim_id": claim_id, "link": link}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
 
 @router.post("/verify-hospital-upload/{claim_id}")
 async def verify_hospital_upload(claim_id: str, discharge_file: UploadFile = File(...), bill_file: UploadFile = File(...)):

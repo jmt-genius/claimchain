@@ -12,6 +12,7 @@ import FullClaim from "./pages/FullClaim";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import HospitalVerify from "./pages/HospitalVerify";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => {
             <Route path="/full-claim" element={<FullClaim />} />
             <Route path="/profile" element={<Profile onLogout={handleLogout} />} />
             <Route path="/settings" element={<Settings onLogout={handleLogout} />} />
+            <Route path="/hospital-verify" element={<HospitalVerify />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
