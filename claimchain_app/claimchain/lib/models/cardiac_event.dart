@@ -16,8 +16,9 @@ class CardiacEvent {
   Map<String, dynamic> toJson() {
     return {
       'customerId': customerId,
-      'bpm': heartRate,
       'timestamp': timestamp.toIso8601String(),
+      'heartRate': heartRate,
+      'mode': mode,
       'summary': summary,
     };
   }
@@ -26,8 +27,8 @@ class CardiacEvent {
     return CardiacEvent(
       customerId: json['customerId'],
       timestamp: DateTime.parse(json['timestamp']),
-      heartRate: json['bpm'],
-      mode: json['mode'] ?? 'unknown',
+      heartRate: json['heartRate'],
+      mode: json['mode'],
       summary: json['summary'],
     );
   }

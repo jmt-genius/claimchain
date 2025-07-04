@@ -2,8 +2,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import React from "react";
 
-const Navigation = () => {
+const Navigation = ({ onLogout }: { onLogout?: () => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -75,6 +76,14 @@ const Navigation = () => {
             >
               Start Claim
             </Button>
+            {onLogout && (
+              <Button
+                onClick={onLogout}
+                className="ml-4 bg-red-600 text-white hover:bg-red-700 px-8 py-7 text-base shadow-lg shadow-red-500/20 transition-all duration-300"
+              >
+                Logout
+              </Button>
+            )}
           </div>
         </div>
       </div>
