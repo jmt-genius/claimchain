@@ -198,4 +198,44 @@ class GeminiService:
             }
 
         except Exception as e:
-            raise Exception(f"Error generating quick claim: {str(e)}") 
+            raise Exception(f"Error generating quick claim: {str(e)}")
+
+    def generate_claim_analysis(self, policy_text: str, claim_details: dict) -> dict:
+        prompt = self._create_prompt(policy_text, claim_details)
+        response = self.model.generate_content(prompt)
+        return self._parse_response(response.text.strip())
+
+    def _create_prompt(self, policy_text: str, claim_details: dict) -> str:
+        bpm_str = f"- The patient's heart rate (bpm) during the event was {claim_details['bpm']}.\n" if 'bpm' in claim_details else ""
+        timestamp_str = f"- The event occurred at {claim_details['event_start']}.\n" if 'event_start' in claim_details else ""
+        return f"""
+        You are a health insurance claim expert.
+
+        Here's the scenario:
+        {timestamp_str}{bpm_str}- The sum insured under their policy is ₹{claim_details['sum_insured']}.
+        - The average hospital treatment cost for this case is ₹{claim_details['hospital_cost']}.
+
+        Below is the insurance policy document. Based on the conditions, coverage limits, exclusions, sub-limits, and caps from this policy:
+
+        1. Calculate how much can actually be **claimed** for this cardiac event which is a heart disease. This could be less than sum insured if there are caps (e.g., room rent limit, disease-specific caps, ICU % limit).
+        2. Then return **40% of the final claimable amount** as the **Quick Claim** (this is the emergency payout given upfront).
+
+        Policy Document:
+        {policy_text}
+
+        Respond ONLY in this format:
+
+        ---
+        ✅ Claimable Amount: ₹<calculated based on policy>
+        ⚡ Quick Claim (40%): ₹<40% of above>
+        🧠 Reason: <how you arrived at that claimable amount, based on the policy>
+        ---
+        """
+
+    def _parse_response(self, response_text: str) -> dict:
+        lines = response_text.split('\n')
+        return {
+            'claimable_amount': float(lines[1].split('₹')[1].replace(',', '')),
+            'quick_claim_amount': float(lines[2].split('₹')[1].replace(',', '')),
+            'reason': lines[3].split('Reason: ')[1]
+        } 
