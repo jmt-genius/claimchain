@@ -31,9 +31,9 @@ export function HomeSparkles() {
         <SparklesCore
           id="tsparticlesfullpage"
           background="transparent"
-          minSize={0.2}
-          maxSize={1}
-          particleDensity={1200}
+          minSize={0.6}
+          maxSize={1.4}
+          particleDensity={50000}
           className="w-full h-full"
           particleColor="#f0abfc"
           speed={0.5}
