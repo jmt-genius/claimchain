@@ -5,6 +5,7 @@ from datetime import datetime
 from io import BytesIO
 from fastapi import UploadFile
 from typing import List
+from constants.insurance_text import policy_text
 
 class GeminiService:
     def __init__(self):
@@ -28,16 +29,15 @@ class GeminiService:
         await file.seek(0)
         return text
 
-    async def evaluate_full_claim(self, policy_file: UploadFile, discharge_file: UploadFile, bill_file: UploadFile) -> dict:
+    async def evaluate_full_claim(self, discharge_file: UploadFile, bill_file: UploadFile) -> dict:
         """Evaluates a full claim based on policy, discharge summary, and medical bill."""
         try:
             # Validate file types
-            for file in [policy_file, discharge_file, bill_file]:
+            for file in [discharge_file, bill_file]:
                 if not file.filename.lower().endswith('.pdf'):
                     raise ValueError(f"File {file.filename} must be a PDF")
 
             # Extract text from all documents
-            policy_text = await self._extract_pdf_text(policy_file)
             discharge_text = await self._extract_pdf_text(discharge_file)
             bill_text = await self._extract_pdf_text(bill_file)
             

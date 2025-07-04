@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
 from typing import Optional
 from fastapi import UploadFile
+from enum import Enum
 
 class QuickClaimRequest(BaseModel):
     sum_insured: float
@@ -27,6 +28,7 @@ class FullClaimEvaluationResponse(BaseModel):
     claimable_amount: float
     reasoning: str
     timestamp: datetime = datetime.now()
+    claim_id: str
 
 class ClaimRequest(BaseModel):
     sum_insured: float
@@ -57,4 +59,15 @@ class UserLogin(BaseModel):
 class UserOut(BaseModel):
     user_id: str
     email: EmailStr
-    name: Optional[str] = None 
+    name: Optional[str] = None
+
+class FullClaimStatus(str, Enum):
+    waiting = "waiting"
+    approved = "approved"
+
+class FullClaimDB(BaseModel):
+    user_id: str
+    discharge_hash: str
+    bill_hash: str
+    status: FullClaimStatus
+    created_at: datetime = Field(default_factory=datetime.utcnow) 
