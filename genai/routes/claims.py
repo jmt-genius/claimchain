@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Body
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Body, Depends
 from fastapi.responses import JSONResponse
 from models.schemas import (
     QuickClaimRequest, 
@@ -6,14 +6,42 @@ from models.schemas import (
     MedicalReportValidationResponse,
     FullClaimEvaluationResponse,
     ClaimResponse,
-    CardiacEvent
+    CardiacEvent,
+    UserSignup,
+    UserLogin,
+    UserOut
 )
 from services.gemini_service import GeminiService
 from utils.mongo import db
 from datetime import datetime
+import hashlib
 
-router = APIRouter(prefix="/claims", tags=["claims"])
+router = APIRouter(prefix="/api", tags=["claims"])
 gemini_service = GeminiService()
+
+@router.post("/signup", response_model=UserOut, status_code=201)
+async def signup(user: UserSignup = Body(...)):
+    # Hash the password (simple hash for demo; use bcrypt/argon2 in production)
+    hashed_pw = hashlib.sha256(user.password.encode()).hexdigest()
+    user_doc = {
+        "email": user.email,
+        "password": hashed_pw,
+        "name": user.name
+    }
+    # Check if user exists
+    existing = await db["users"].find_one({"email": user.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    result = await db["users"].insert_one(user_doc)
+    return UserOut(user_id=str(result.inserted_id), email=user.email, name=user.name)
+
+@router.post("/login")
+async def login(user: UserLogin = Body(...)):
+    hashed_pw = hashlib.sha256(user.password.encode()).hexdigest()
+    user_doc = await db["users"].find_one({"email": user.email, "password": hashed_pw})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"user_id": str(user_doc["_id"]), "email": user_doc["email"], "name": user_doc.get("name")}
 
 @router.post("/evaluate-full-claim", response_model=FullClaimEvaluationResponse)
 async def evaluate_full_claim(
