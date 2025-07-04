@@ -9,9 +9,12 @@ GMAIL_PASS = os.environ.get("GMAIL_PASS", "ncbbgnwyljozujpj")
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
-async def send_verification_link(email: str, link: str):
+async def send_verification_link(email: str, link: str, message: str = None):
     subject = "Hospital Claim Verification Required"
-    body = f"Please verify the claim by uploading the required medical documents and bill using the following link: {link}"
+    if message is None:
+        body = f"Please verify the claim by uploading the required medical documents and bill using the following link: {link}"
+    else:
+        body = message
 
     msg = MIMEMultipart()
     msg["From"] = GMAIL_USER
