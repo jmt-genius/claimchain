@@ -18,7 +18,7 @@ type ValidationResult = {
 async function validateMedicalReport(file: File): Promise<ValidationResult> {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch("http://localhost:8000/claims/validate-medical-report", {
+  const response = await fetch("http://localhost:8000/api/validate-medical-report", {
     method: "POST",
     body: formData,
   });
@@ -40,7 +40,7 @@ async function evaluateFullClaim(policyFile: File, dischargeFile: File, billFile
   formData.append("policy_file", policyFile);
   formData.append("discharge_file", dischargeFile);
   formData.append("bill_file", billFile);
-  const response = await fetch("http://localhost:8000/claims/evaluate-full-claim", {
+  const response = await fetch("http://localhost:8000/api/evaluate-full-claim", {
     method: "POST",
     body: formData,
   });
@@ -195,7 +195,7 @@ const FullClaim = () => {
                           <div className="mx-auto w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
                             <span className="text-purple-300">📄</span>
                           </div>
-                          <p className="text-sm font-medium text-white">Upload Digital Certificate</p>
+                          <p className="text-sm font-medium text-white">Policy Document</p>
                           <p className="text-xs text-purple-200/80">PDF up to 10MB</p>
                         </div>
                       </label>
