@@ -158,7 +158,7 @@ async def calculate_claim(
         sum_insured = 1000000
         hospital_cost = 50000
 
-        policy_text = policy_text
+      
         # Prepare claim details
         claim_details = {
             "sum_insured": sum_insured,
