@@ -8,22 +8,117 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
+// API call for validating medical report
+type ValidationResult = {
+  is_valid_report: boolean;
+  reason: string;
+  timestamp: string;
+};
+
+async function validateMedicalReport(file: File): Promise<ValidationResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("http://localhost:8000/claims/validate-medical-report", {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+// API call for evaluating full claim
+interface FullClaimResult {
+  claimable_amount: number;
+  reasoning: string;
+  timestamp: string;
+}
+
+async function evaluateFullClaim(policyFile: File, dischargeFile: File, billFile: File): Promise<FullClaimResult> {
+  const formData = new FormData();
+  formData.append("policy_file", policyFile);
+  formData.append("discharge_file", dischargeFile);
+  formData.append("bill_file", billFile);
+  const response = await fetch("http://localhost:8000/claims/evaluate-full-claim", {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 const FullClaim = () => {
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [dischargeSummaryFile, setDischargeSummaryFile] = useState<File | null>(null);
+  const [policyFile, setPolicyFile] = useState<File | null>(null);
+  const [billFile, setBillFile] = useState<File | null>(null);
+  const [validationLog, setValidationLog] = useState<string | null>(null);
+  const [validationStatus, setValidationStatus] = useState<"pending" | "success" | "error" | null>(null);
+  const [analysisLog, setAnalysisLog] = useState<string | null>(null);
+  const [claimResult, setClaimResult] = useState<FullClaimResult | null>(null);
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     setIsAnalyzing(true);
-    // Simulate AI analysis
-    setTimeout(() => {
+    setValidationStatus("pending");
+    setValidationLog("Validating discharge summary...");
+    setAnalysisLog(null);
+    setClaimResult(null);
+    setAnalysisComplete(false);
+    try {
+      if (!dischargeSummaryFile) {
+        setValidationStatus("error");
+        setValidationLog("No discharge summary file selected.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!policyFile) {
+        setValidationStatus("error");
+        setValidationLog("No policy file selected.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!billFile) {
+        setValidationStatus("error");
+        setValidationLog("No hospital bill file selected.");
+        setIsAnalyzing(false);
+        return;
+      }
+      // Step 1: Validate discharge summary
+      const result = await validateMedicalReport(dischargeSummaryFile);
+      if (result.is_valid_report) {
+        setValidationStatus("success");
+        setValidationLog(`Validation successful: ${result.reason}`);
+        setAnalysisLog("Evaluating full claim with AI...");
+        // Step 2: Evaluate full claim
+        try {
+          const claim = await evaluateFullClaim(policyFile, dischargeSummaryFile, billFile);
+          setClaimResult(claim);
+          setAnalysisLog("Full claim evaluated successfully.");
+          setAnalysisComplete(true);
+          setIsAnalyzing(false);
+          toast({
+            title: "Documents Analyzed",
+            description: "AI has successfully analyzed your medical documents.",
+          });
+        } catch (claimErr: any) {
+          setAnalysisLog(`Error evaluating full claim: ${claimErr.message}`);
+          setIsAnalyzing(false);
+        }
+      } else {
+        setValidationStatus("error");
+        setValidationLog(`Validation failed: ${result.reason}`);
+        setIsAnalyzing(false);
+      }
+    } catch (err: any) {
+      setValidationStatus("error");
+      setValidationLog(`Validation error: ${err.message}`);
       setIsAnalyzing(false);
-      setAnalysisComplete(true);
-      toast({
-        title: "Documents Analyzed",
-        description: "AI has successfully analyzed your medical documents.",
-      });
-    }, 3000);
+    }
   };
 
   const handleSubmit = () => {
@@ -50,7 +145,11 @@ const FullClaim = () => {
                   <div>
                     <Label htmlFor="hospital-docs" className="text-white">Hospital Bill</Label>
                     <div className="mt-2 border-2 border-dashed border-purple-400/20 rounded-2xl p-6 text-center hover:border-purple-400/40 transition-colors">
-                      <input type="file" multiple accept=".pdf,.jpg,.png" className="hidden" id="hospital-docs" />
+                      <input type="file" multiple accept=".pdf,.jpg,.png" className="hidden" id="hospital-docs" onChange={e => {
+                        if (e.target.files && e.target.files[0]) {
+                          setBillFile(e.target.files[0]);
+                        }
+                      }} />
                       <label htmlFor="hospital-docs" className="cursor-pointer">
                         <div className="space-y-2">
                           <div className="mx-auto w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
@@ -66,7 +165,11 @@ const FullClaim = () => {
                   <div>
                     <Label htmlFor="discharge-summary" className="text-white">Discharge Summary</Label>
                     <div className="mt-2 border-2 border-dashed border-purple-400/20 rounded-2xl p-6 text-center hover:border-purple-400/40 transition-colors">
-                      <input type="file" accept=".pdf,.jpg,.png" className="hidden" id="discharge-summary" />
+                      <input type="file" accept=".pdf,.jpg,.png" className="hidden" id="discharge-summary" onChange={e => {
+                        if (e.target.files && e.target.files[0]) {
+                          setDischargeSummaryFile(e.target.files[0]);
+                        }
+                      }} />
                       <label htmlFor="discharge-summary" className="cursor-pointer">
                         <div className="space-y-2">
                           <div className="mx-auto w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
@@ -80,16 +183,20 @@ const FullClaim = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="digital-certificate" className="text-white">Digital Certificate</Label>
+                    <Label htmlFor="policy-docs" className="text-white">Policy Document</Label>
                     <div className="mt-2 border-2 border-dashed border-purple-400/20 rounded-2xl p-6 text-center hover:border-purple-400/40 transition-colors">
-                      <input type="file" accept=".pdf,.jpg,.png" className="hidden" id="digital-certificate" />
-                      <label htmlFor="digital-certificate" className="cursor-pointer">
+                      <input type="file" accept=".pdf,.jpg,.png" className="hidden" id="policy-docs" onChange={e => {
+                        if (e.target.files && e.target.files[0]) {
+                          setPolicyFile(e.target.files[0]);
+                        }
+                      }} />
+                      <label htmlFor="policy-docs" className="cursor-pointer">
                         <div className="space-y-2">
                           <div className="mx-auto w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
-                            <span className="text-purple-300">🏆</span>
+                            <span className="text-purple-300">📄</span>
                           </div>
                           <p className="text-sm font-medium text-white">Upload Digital Certificate</p>
-                          <p className="text-xs text-purple-200/80">Medical certification document</p>
+                          <p className="text-xs text-purple-200/80">PDF up to 10MB</p>
                         </div>
                       </label>
                     </div>
@@ -110,7 +217,21 @@ const FullClaim = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-white">AI Analysis Results</h3>
               
-              {isAnalyzing && (
+              {validationStatus && (
+                <div className="bg-purple-900/20 p-4 rounded-xl mb-2">
+                  <p className={`text-sm ${validationStatus === "success" ? "text-green-300" : validationStatus === "pending" ? "text-purple-300" : "text-red-300"}`}>
+                    {validationLog}
+                  </p>
+                </div>
+              )}
+
+              {analysisLog && (
+                <div className="bg-purple-900/20 p-4 rounded-xl mb-2">
+                  <p className="text-sm text-purple-300">{analysisLog}</p>
+                </div>
+              )}
+
+              {isAnalyzing && validationStatus !== "error" && (
                 <div className="bg-purple-900/20 p-6 rounded-2xl">
                   <div className="animate-pulse">
                     <p className="text-sm text-purple-300">🤖 Gemini AI is analyzing your documents...</p>
@@ -122,91 +243,20 @@ const FullClaim = () => {
                 </div>
               )}
 
-              {analysisComplete && (
+              {claimResult && (
                 <div className="space-y-4">
                   <div className="bg-purple-900/20 p-4 rounded-xl">
-                    <h4 className="font-medium mb-2 text-white">Diagnosis Detected</h4>
-                    <p className="text-sm text-purple-200/80">Acute Myocardial Infarction (Heart Attack)</p>
-                    <Badge className="bg-green-500/20 text-green-300 mt-2">High Confidence</Badge>
+                    <h4 className="font-medium mb-2 text-white">Claimable Amount</h4>
+                    <p className="text-2xl font-bold text-purple-300">₹{claimResult.claimable_amount.toLocaleString()}</p>
                   </div>
-
                   <div className="bg-purple-900/20 p-4 rounded-xl">
-                    <h4 className="font-medium mb-2 text-white">Estimated Medical Cost</h4>
-                    <p className="text-2xl font-bold text-purple-300">$15,450</p>
-                    <p className="text-sm text-purple-200/80">Based on treatment codes and hospital billing</p>
-                  </div>
-
-                  <div className="bg-purple-900/20 p-4 rounded-xl">
-                    <h4 className="font-medium mb-2 text-white">Policy Eligibility</h4>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-green-300">Covered under Emergency Care Policy</span>
-                    </div>
-                    <p className="text-sm text-purple-200/80 mt-1">
-                      Deductible: $500 | Coverage: 90%
-                    </p>
+                    <h4 className="font-medium mb-2 text-white">Reasoning</h4>
+                    <p className="text-sm text-purple-200/80">{claimResult.reasoning}</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Form Fields */}
-          {analysisComplete && (
-            <div className="mt-8 space-y-6">
-              <h3 className="text-lg font-semibold text-white">Claim Details (Auto-filled by AI)</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="diagnosis" className="text-white">Diagnosis</Label>
-                  <Input 
-                    id="diagnosis" 
-                    value="Acute Myocardial Infarction" 
-                    className="bg-purple-900/20 text-white border-purple-400/20"
-                    readOnly 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="treatment-date" className="text-white">Treatment Date</Label>
-                  <Input 
-                    id="treatment-date" 
-                    value="2024-01-15" 
-                    type="date"
-                    className="bg-purple-900/20 text-white border-purple-400/20"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="hospital" className="text-white">Hospital/Clinic</Label>
-                  <Input 
-                    id="hospital" 
-                    value="St. Mary's Medical Center" 
-                    className="bg-purple-900/20 text-white border-purple-400/20"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="claim-amount" className="text-white">Claim Amount</Label>
-                  <Input 
-                    id="claim-amount" 
-                    value="$15,450" 
-                    className="bg-purple-900/20 text-white border-purple-400/20"
-                    readOnly 
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-center mt-8">
-                <Button 
-                  onClick={handleSubmit}
-                  className="bg-purple-600 text-white hover:bg-purple-700 px-8 py-6 rounded-xl shadow-lg shadow-purple-500/20 text-lg font-medium"
-                >
-                  Submit Full Claim
-                </Button>
-              </div>
-            </div>
-          )}
         </Card>
       </div>
     </div>

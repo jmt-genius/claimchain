@@ -33,7 +33,7 @@ export function HomeSparkles() {
           background="transparent"
           minSize={0.6}
           maxSize={1.4}
-          particleDensity={50000}
+          particleDensity={20000}
           className="w-full h-full"
           particleColor="#f0abfc"
           speed={0.5}
