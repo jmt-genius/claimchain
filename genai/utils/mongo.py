@@ -1,8 +1,8 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("MONGO_DB", "genai")
+MONGO_URI = """mongodb+srv://aswinraaj2405:nnOrXYpYQ7tBhKuN@genai.c2hdznk.mongodb.net/?retryWrites=true&w=majority&appName=GenAI"""
+DB_NAME = "genai"
 
 client = AsyncIOMotorClient(MONGO_URI)
 db = client[DB_NAME]
