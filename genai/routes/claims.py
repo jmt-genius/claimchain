@@ -159,7 +159,7 @@ async def calculate_claim(
         hospital_cost = 50000
 
         policy_text = policy_text
-    # Prepare claim details
+        # Prepare claim details
         claim_details = {
             "sum_insured": sum_insured,
             "event_start": event_start,
@@ -179,8 +179,8 @@ async def calculate_claim(
 @router.post("/send-hospital-verification-email/{claim_id}")
 async def send_hospital_verification_email(claim_id: str, body: dict = Body(...)):
     email = body.get("email")
-    # Hardcoded verification link
-    link = f"https://yourdomain.com/hospital-verify?claim_id={claim_id}"
+    # Verification link
+    link = f"http://localhost:5173/hospital-verify?claim_id={claim_id}"
     if not email:
         raise HTTPException(status_code=422, detail="'email' is required.")
     try:
