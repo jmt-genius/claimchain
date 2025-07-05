@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/heart_rate_provider.dart';
 import '../widgets/heart_rate_chart.dart';
-import 'range_simulation_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,42 +16,6 @@ class HomeScreen extends StatelessWidget {
         ),
         backgroundColor: Colors.red.shade700,
         elevation: 0,
-        actions: [
-          Consumer<HeartRateProvider>(
-            builder: (context, provider, child) {
-              if (!provider.isSimulationMode) {
-                // Secret camouflaged white button
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const RangeSimulationScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(
-                          0.01,
-                        ), // nearly invisible
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              } else {
-                return const SizedBox.shrink();
-              }
-            },
-          ),
-        ],
       ),
       body: Consumer<HeartRateProvider>(
         builder: (context, provider, child) {
@@ -66,7 +29,6 @@ class HomeScreen extends StatelessWidget {
                   currentHeartRate: provider.currentHeartRate,
                 ),
                 _buildLatestEventCard(provider),
-                _buildCustomerIdCard(provider),
                 _buildControlButtons(provider),
                 if (provider.syncStatus.isNotEmpty)
                   _buildSyncStatusCard(provider),
@@ -265,58 +227,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCustomerIdCard(HeartRateProvider provider) {
-    final controller = TextEditingController(text: provider.customerId);
-    final hasEvent = provider.latestEvent != null;
-
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Customer ID',
-                border: OutlineInputBorder(),
-                hintText: 'Enter customer ID',
-              ),
-              onChanged: (value) => provider.setCustomerId(value),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: hasEvent ? () => provider.syncToServer() : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: Text(
-                hasEvent
-                    ? 'Sync Latest Cardiac Event'
-                    : 'Waiting for Cardiac Event',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            if (!hasEvent) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'No cardiac events detected yet. Events are triggered when heart rate exceeds 130 BPM.',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }

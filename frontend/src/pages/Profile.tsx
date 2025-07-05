@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-const Profile = () => {
+const Profile = ({ onLogout }: { onLogout?: () => void }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -21,7 +21,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-[#0f061e]">
-      <Navigation />
+      <Navigation onLogout={onLogout} />
       
       <div className="max-w-4xl mx-auto p-6 pt-32 space-y-8">
         {/* Profile Header */}

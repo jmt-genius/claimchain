@@ -5,10 +5,11 @@ from datetime import datetime
 from io import BytesIO
 from fastapi import UploadFile
 from typing import List
+from constants.insurance_text import policy_text
 
 class GeminiService:
     def __init__(self):
-        api_key = "AIzaSyCClaQFo9MrwLwbhv1ryZ21neeQbEyN41A" #os.getenv("GOOGLE_API_KEY")
+        api_key = "AIzaSyBscSJWvpqEbUikHGV6XlFDKJqEuYFUcK4" #os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY environment variable not set")
         genai.configure(api_key=api_key)
@@ -28,16 +29,15 @@ class GeminiService:
         await file.seek(0)
         return text
 
-    async def evaluate_full_claim(self, policy_file: UploadFile, discharge_file: UploadFile, bill_file: UploadFile) -> dict:
+    async def evaluate_full_claim(self, discharge_file: UploadFile, bill_file: UploadFile) -> dict:
         """Evaluates a full claim based on policy, discharge summary, and medical bill."""
         try:
             # Validate file types
-            for file in [policy_file, discharge_file, bill_file]:
+            for file in [discharge_file, bill_file]:
                 if not file.filename.lower().endswith('.pdf'):
                     raise ValueError(f"File {file.filename} must be a PDF")
 
             # Extract text from all documents
-            policy_text = await self._extract_pdf_text(policy_file)
             discharge_text = await self._extract_pdf_text(discharge_file)
             bill_text = await self._extract_pdf_text(bill_file)
             
@@ -233,9 +233,34 @@ class GeminiService:
         """
 
     def _parse_response(self, response_text: str) -> dict:
-        lines = response_text.split('\n')
-        return {
-            'claimable_amount': float(lines[1].split('₹')[1].replace(',', '')),
-            'quick_claim_amount': float(lines[2].split('₹')[1].replace(',', '')),
-            'reason': lines[3].split('Reason: ')[1]
-        } 
+        try:
+            # Split by newlines and remove empty lines
+            lines = [line.strip() for line in response_text.split('\n') if line.strip()]
+            
+            # Find the lines containing our data using more robust checks
+            amount_line = next((line for line in lines if '₹' in line and ('Claimable Amount:' in line or '✅' in line)), None)
+            quick_claim_line = next((line for line in lines if '₹' in line and ('Quick Claim' in line or '⚡' in line)), None)
+            reason_line = next((line for line in lines if 'Reason:' in line or '🧠' in line), None)
+            
+            if not all([amount_line, quick_claim_line, reason_line]):
+                raise ValueError("Response missing required fields")
+            
+            # Extract amounts, handling potential formatting issues
+            claimable_amount = float(amount_line.split('₹')[1].strip().replace(',', ''))
+            quick_claim_amount = float(quick_claim_line.split('₹')[1].strip().replace(',', ''))
+            
+            # Extract reason, handling different possible formats
+            reason = reason_line.split('Reason:' if 'Reason:' in reason_line else '🧠')[1].strip()
+            
+            return {
+                'claimable_amount': claimable_amount,
+                'quick_claim_amount': quick_claim_amount,
+                'reason': reason or "No reason provided"
+            }
+        except Exception as e:
+            # Provide default values if parsing fails
+            return {
+                'claimable_amount': 0.0,
+                'quick_claim_amount': 0.0,
+                'reason': f"Error parsing response: {str(e)}. Raw response: {response_text}"
+            }
