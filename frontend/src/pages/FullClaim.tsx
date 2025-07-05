@@ -27,14 +27,24 @@ interface LogEntry {
 async function validateMedicalReport(file: File): Promise<ValidationResult> {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch("http://localhost:8000/api/validate-medical-report", {
-    method: "POST",
-    body: formData,
-  });
-  if (!response.ok) {
-    throw new Error(await response.text());
+  
+  try {
+    const response = await fetch("http://localhost:8000/api/validate-medical-report", {
+      method: "POST",
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Validation API error:", errorText);
+      throw new Error(errorText);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error("Validation request failed:", error);
+    throw error;
   }
-  return response.json();
 }
 
 // API call for evaluating full claim
@@ -134,14 +144,7 @@ const FullClaim = () => {
       
       // Step 1: Validate discharge summary
       addLog('info', 'Validating discharge summary...');
-      const validationForm = new FormData();
-      validationForm.append("file", dischargeSummaryFile);
-      const validationRes = await fetch("http://localhost:8000/api/validate-medical-report", {
-        method: "POST",
-        body: validationForm,
-      });
-      if (!validationRes.ok) throw new Error(await validationRes.text());
-      const validation = await validationRes.json();
+      const validation = await validateMedicalReport(dischargeSummaryFile);
       if (!validation.is_valid_report) {
         addLog('error', 'Discharge summary validation failed', validation.reason);
         throw new Error("Discharge summary validation failed: " + validation.reason);
